@@ -23,20 +23,28 @@ class Individual:
         self.age = 0
         self.behavior_weights = behavior_weights if behavior_weights else species.behavior_weights.copy()
         self.traits = traits if traits else species.base_traits.copy()
+        self.path = []
 
+    # Move Logic
     def move(self, env, sim):
-        best_move = self.evaluate_visible_tiles(env, sim.individuals)
-        # Move to best tile
-        if best_move != (self.x, self.y):
-            terrain = env.get_terrain(*best_move)
+        if not self.path:
+            # Pick new destination tile with best score
+            target = self.evaluate_visible_tiles(env, sim.individuals)
+            if target != (self.x, self.y):
+                self.path = get_path((self.x, self.y), target)
+        
+        if self.path:
+            next_step = self.path.pop(0)
+            terrain = env.get_terrain(*next_step)
             move_cost = 2.0 - (self.traits["speed"] * self.species.terrain_affinity.get(terrain, 0.5))
             self.energy -= max(move_cost, 0.5)
-            self.x, self.y = best_move
-        # Lose energy from not moving
+            self.x, self.y = next_step
         else:
-            self.energy-=1
+            self.energy -= 1  # no move this tick
 
 
+
+    #Tile Evaluation Logic
     def evaluate_visible_tiles(self, env, individuals):
         vision = self.traits["vision_radius"]
         best_score = float('-inf')
@@ -97,4 +105,20 @@ def Reproduce(ind1, ind2, sim):
     ind2.energy-=70
     print("TWO MOTHA SUCKAS:", ind1.species.name, ind1.ID, "AND", ind2.ID, "REPRODUCED!")
     return
+
+def get_path(start, goal):
+    """Return a list of steps from start to goal, moving 1 tile per step."""
+    path = []
+    x, y = start
+    gx, gy = goal
+
+    while (x, y) != (gx, gy):
+        dx = gx - x
+        dy = gy - y
+        step_x = 0 if dx == 0 else (1 if dx > 0 else -1)
+        step_y = 0 if dy == 0 else (1 if dy > 0 else -1)
+        x += step_x
+        y += step_y
+        path.append((x, y))
+    return path
 

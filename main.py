@@ -55,21 +55,30 @@ def run_simulation_loop():
     pygame.display.set_caption("Evolution Simulator")
     clock = pygame.time.Clock()
 
-    # === Initialize environment and simulation ===
     env = Environment(WIDTH, HEIGHT)
     sim = Simulation(env, speciesList)
 
     running = True
+    frame_count = 0
+    sim_speed = 15  # Only run sim.step() every 5 frames
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
-        sim.step()
+        # Step the simulation only every N frames
+        if frame_count % sim_speed == 0:
+            sim.step()
+
         draw_grid(screen, env, sim.individuals)
-        clock.tick(2)  # 2 frames per second
+        pygame.display.flip()
+
+        frame_count += 1
+        clock.tick(30)  # Visual framerate target (30 FPS)
 
     pygame.quit()
+
 
 if __name__ == "__main__":
     run_simulation_loop()
