@@ -118,7 +118,9 @@ class Environment:
     def grow_food(self):
         for y in range(self.height):
             for x in range(self.width):
-                if random.random() < 0.000005:  # Lowered growth chance
+                #if random.random() < 0.000005:
+                if random.random() < 0.0005:  # Lowered growth chance
+
                     self.food[y][x] = min(5, self.food[y][x] + 1)
 
     def consume_food(self, x, y, amount):

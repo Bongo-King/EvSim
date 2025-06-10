@@ -12,6 +12,7 @@ class Simulation:
                     self.individuals.append(Individual(species, x, y, _))
 
     def step(self):
+        already_paired = set()
         for ind in list(self.individuals):  # Make a copy to avoid issues if removing
             ind.move(self.env, self)
             ind.age += 1
@@ -25,5 +26,17 @@ class Simulation:
                 ind.species.number-=1
             if len(self.individuals) == 0:
                  print("All individuals are dead.")
+            # Reproduction logic
+            if ind.ID in already_paired or ind.energy <= 70:
+                continue
+            for other in self.individuals:
+                if other is not ind and other.species == ind.species and other.energy > 70:
+                    if abs(other.x - ind.x) <= 1 and abs(other.y - ind.y) <= 1:
+                        if other.ID not in already_paired:
+                            from individual import Reproduce  # import here to avoid circular import
+                            Reproduce(ind, other, self)
+                            already_paired.add(ind.ID)
+                            already_paired.add(other.ID)
+                            break
 
         self.env.grow_food()

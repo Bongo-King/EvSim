@@ -14,7 +14,7 @@ DIRECTIONS = [
 
 
 class Individual:
-    def __init__(self, species, x, y, ind_ID, behavior_weights, traits=None):
+    def __init__(self, species, x, y, ind_ID, behavior_weights=None, traits=None):
         self.species = species
         self.x = x
         self.y = y
@@ -23,64 +23,16 @@ class Individual:
         self.age = 0
         self.behavior_weights = behavior_weights if behavior_weights else species.behavior_weights.copy()
         self.traits = traits if traits else species.base_traits.copy()
-        
-    def get_nearby_individuals(self, others):
-        nearby = []
-        radius = self.traits["vision_radius"]
-        for other in others:
-            if other is not self:
-                dx = abs(other.x - self.x)
-                dy = abs(other.y - self.y)
-                if dx <= radius and dy <= radius:
-                    nearby.append(other)
-        return nearby
-    
-  
 
     def move(self, env, sim):
-        width = env.width
-        height = env.height
-        best_score = -1
-        best_move = (self.x, self.y)
-        nearby = self.get_nearby_individuals(sim.individuals)
-
-        #if the individual has enough energy to reproduce, move towards other members of the same species with enough energy
-        if self.energy >70:
-            for ind in nearby:
-                if ind.species == self.species and ind.energy > 70:
-                    if abs(ind.x - self.x) > 1:
-                        dx = 1 if ind.x > self.x else -1 if ind.x < self.x else 0
-                        dy = 1 if ind.y > self.y else -1 if ind.y < self.y else 0
-                        best_move = (self.x + dx, self.y + dy)
-
-                    #if next to each other, reproduce
-                    elif ind.energy >70: 
-                        Reproduce(self, ind, sim)
-                        
-        #if not, move to find food.
-        else: 
-            for dx, dy in DIRECTIONS:
-                nx, ny = self.x + dx, self.y + dy
-
-                if 0 <= nx < width and 0 <= ny < height:
-                    terrain = env.get_terrain(nx, ny)
-                    food = env.food[ny][nx]
-
-                    # Base movement score: terrain affinity × food
-                    terrain_affinity = self.species.terrain_affinity.get(terrain, 0.5)
-                    score = terrain_affinity + (0.2 * food)
-
-                    if score > best_score:
-                        best_score = score
-                        best_move = (nx, ny)
-
+        best_move = self.evaluate_visible_tiles(env, sim.individuals)
         # Move to best tile
         if best_move != (self.x, self.y):
             terrain = env.get_terrain(*best_move)
             move_cost = 2.0 - (self.traits["speed"] * self.species.terrain_affinity.get(terrain, 0.5))
             self.energy -= max(move_cost, 0.5)
             self.x, self.y = best_move
-            # Lose energy from not moving
+        # Lose energy from not moving
         else:
             self.energy-=1
 
@@ -102,10 +54,11 @@ class Individual:
 
                 # REPRODUCTION SCORE
                 mate_score = 0
-                for other in individuals:
-                    if other is not self and other.species == self.species and other.energy > 70:
-                        if abs(other.x - nx) <= 1 and abs(other.y - ny) <= 1:
-                            mate_score += 1
+                if self.energy>70:
+                    for other in individuals:
+                        if other is not self and other.species == self.species and other.energy > 70:
+                            if abs(other.x - nx) <= 1 and abs(other.y - ny) <= 1:
+                                mate_score += 1
 
                 # EXPLORATION SCORE (favor tiles farther from current position)
                 exploration_score = ((dx ** 2 + dy ** 2) ** 0.5) / vision
@@ -113,7 +66,7 @@ class Individual:
                 # DANGER SCORE (inverse of predator proximity)
                 danger_score = 0
                 for other in individuals:
-                    if other is not self and other.species != self.species:
+                    if other is not self and other.species != self.species and other.species.is_predator:
                         dist = ((other.x - nx) ** 2 + (other.y - ny) ** 2) ** 0.5
                         if dist < 3:  # arbitrary danger radius
                             danger_score -= (3 - dist) / 3
@@ -125,16 +78,16 @@ class Individual:
                     self.behavior_weights["exploration"] * exploration_score +
                     self.behavior_weights["avoid_predators"] * danger_score
                 )
+                # print(f"Tile ({nx},{ny}) score: {score:.2f} (food: {food_score:.2f}, mate: {mate_score}, explore: {exploration_score:.2f}, danger: {danger_score:.2f})")
+
 
                 if score > best_score:
                     best_score = score
-                    best_tile = (nx, ny)
+                    best_tiles = [(nx, ny)]
+                elif score == best_score:
+                    best_tiles.append((nx, ny))
 
-        return best_tile
-
-
-
-                
+        return random.choice(best_tiles) if best_tiles else (self.x, self.y)
 
 def Reproduce(ind1, ind2, sim):
     ind1.species.number+=1
@@ -142,5 +95,6 @@ def Reproduce(ind1, ind2, sim):
     sim.individuals.append(new)
     ind1.energy-=70
     ind2.energy-=70
+    print("TWO MOTHA SUCKAS:", ind1.species.name, ind1.ID, "AND", ind2.ID, "REPRODUCED!")
     return
 

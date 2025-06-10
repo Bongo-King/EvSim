@@ -67,7 +67,7 @@ def run_simulation_loop():
 
         sim.step()
         draw_grid(screen, env, sim.individuals)
-        clock.tick(5)  # 5 frames per second
+        clock.tick(2)  # 2 frames per second
 
     pygame.quit()
 
