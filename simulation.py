@@ -18,7 +18,8 @@ class Simulation:
             ind.age += 1
 
             # Eat food if available
-            self.env.consume_food(ind.x, ind.y, 1)
+            eaten = self.env.consume_food(ind.x, ind.y, 1)
+            ind.energy += eaten * 5
             # Remove if dead
             if ind.energy <= 0:
                 print("Individual", ind.ID, "of species", ind.species.name, "has died.")
